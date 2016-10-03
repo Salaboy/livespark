@@ -37,31 +37,14 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpSession;
-import org.guvnor.ala.build.maven.config.MavenBuildConfig;
-import org.guvnor.ala.build.maven.config.MavenBuildExecConfig;
-import org.guvnor.ala.build.maven.config.MavenProjectConfig;
-import org.guvnor.ala.config.BinaryConfig;
-import org.guvnor.ala.config.BuildConfig;
-import org.guvnor.ala.config.ProjectConfig;
-import org.guvnor.ala.config.ProviderConfig;
-import org.guvnor.ala.config.RuntimeConfig;
-import org.guvnor.ala.config.SourceConfig;
 import org.guvnor.ala.pipeline.ConfigExecutor;
 import org.guvnor.ala.pipeline.Input;
 import org.guvnor.ala.pipeline.Pipeline;
-import org.guvnor.ala.pipeline.PipelineFactory;
-import org.guvnor.ala.pipeline.Stage;
-import static org.guvnor.ala.pipeline.StageUtil.config;
 import org.guvnor.ala.pipeline.events.AfterPipelineExecutionEvent;
-import org.guvnor.ala.pipeline.events.OnErrorPipelineExecutionEvent;
 import org.guvnor.ala.pipeline.execution.PipelineExecutor;
-import org.guvnor.ala.registry.BuildRegistry;
-import org.guvnor.ala.registry.SourceRegistry;
-import org.guvnor.ala.registry.local.InMemoryRuntimeRegistry;
+import org.guvnor.ala.registry.PipelineRegistry;
+import org.guvnor.ala.registry.RuntimeRegistry;
 import org.guvnor.ala.runtime.Runtime;
-import org.guvnor.ala.source.git.config.GitConfig;
-import org.guvnor.ala.wildfly.config.WildflyProviderConfig;
-import org.guvnor.ala.wildfly.config.impl.ContextAwareWildflyRuntimeExecConfig;
 
 import org.guvnor.common.services.backend.file.DotFileFilter;
 import org.guvnor.common.services.project.builder.model.BuildMessage;
@@ -118,17 +101,17 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
 
     private IOService ioService;
 
-    private Instance<ConfigExecutor> configExecutors;
-
     private RepositoryService repositoryService;
 
     private Event<AppReady> appReadyEvent;
 
-    private SourceRegistry sourceRegistry;
-    private BuildRegistry buildRegistry;
-    private InMemoryRuntimeRegistry runtimeRegistry;
-    
-    private CDIPipelineEventListener eventListener;
+    private Instance<ConfigExecutor> configExecutors;
+
+    private RuntimeRegistry runtimeRegistry;
+
+    private PipelineRegistry pipelineRegistry;
+
+    private CDIPipelineEventListener pipelineEventListener;
 
     // For proxying
     public GwtWarBuildServiceImpl() {
@@ -145,8 +128,9 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
             final BuildCallableFactory callableFactory,
             final TmpDirFactory tmpDirFactory,
             final @Named( "ioStrategy" ) IOService ioService, final Instance<ConfigExecutor> configExecutors,
-            final RepositoryService repositoryService, final Event<AppReady> appReadyEvent, SourceRegistry sourceRegistry,
-            BuildRegistry buildRegistry, InMemoryRuntimeRegistry runtimeRegistry, CDIPipelineEventListener eventListener) {
+            final RepositoryService repositoryService, final Event<AppReady> appReadyEvent, 
+            final RuntimeRegistry runtimeRegistry, final PipelineRegistry pipelineRegistry, 
+            final CDIPipelineEventListener pipelineEventListener ) {
         super( pomService, m2RepoService, projectService, repositoryResolver, projectRepositoriesService, cache, handlers );
         this.callableFactory = callableFactory;
         this.tmpDirFactory = tmpDirFactory;
@@ -154,10 +138,9 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
         this.configExecutors = configExecutors;
         this.repositoryService = repositoryService;
         this.appReadyEvent = appReadyEvent;
-        this.buildRegistry = buildRegistry;
-        this.sourceRegistry = sourceRegistry;
         this.runtimeRegistry = runtimeRegistry;
-        this.eventListener = eventListener;
+        this.pipelineRegistry = pipelineRegistry;
+        this.pipelineEventListener = pipelineEventListener;
     }
 
     @Resource
@@ -285,11 +268,9 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
 
     @Override
     public BuildResults buildAndDeploy( Project project, boolean suppressHandlers, DeploymentMode mode ) {
-        final BuildResults results = new BuildResults( project.getPom().getGav() );
-        buildAndDeployWithPipeline( project );
 //        BuildResults results = super.buildAndDeploy( project, suppressHandlers, mode );
 //        deployWar( project );
-        return results;
+        return buildAndDeployWithPipeline( project );
     }
 
     private void deployWar( final Project project ) {
@@ -329,27 +310,7 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
     }
 
     public BuildResults buildAndDeployWithPipeline( Project project ) {
-        final Stage<Input, SourceConfig> sourceConfig = config( "Git Source", (s) -> new GitConfig() {
-        } );
-        final Stage<SourceConfig, ProjectConfig> projectConfig = config( "Maven Project", (s) -> new MavenProjectConfig() {
-        } );
-        final Stage<ProjectConfig, BuildConfig> buildConfig = config( "Maven Build Config", (s) -> new MavenBuildConfig() {
-        } );
-
-        final Stage<BuildConfig, BinaryConfig> buildExec = config( "Maven Build", (s) -> new MavenBuildExecConfig() {
-        } );
-        final Stage<BinaryConfig, ProviderConfig> providerConfig = config( "Wildfly Provider Config", (s) -> new WildflyProviderConfig() {
-        } );
-
-        final Stage<ProviderConfig, RuntimeConfig> runtimeExec = config( "Wildfly Runtime Exec", (s) -> new ContextAwareWildflyRuntimeExecConfig() );
-
-        final Pipeline pipe = PipelineFactory
-                .startFrom( sourceConfig )
-                .andThen( projectConfig )
-                .andThen( buildConfig )
-                .andThen( buildExec )
-                .andThen( providerConfig )
-                .andThen( runtimeExec ).buildAs( "my pipe" );
+        final BuildResults results = new BuildResults( project.getPom().getGav() );
         Iterator<ConfigExecutor> iterator = configExecutors.iterator();
         Collection<ConfigExecutor> configs = new ArrayList<>();
         while ( iterator.hasNext() ) {
@@ -362,7 +323,9 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
         Path repoPath = PathFactory.newPath( "repo", rootPath.toURI().substring( 0, rootPath.toURI().indexOf( rootPath.getFileName() ) ) );
         Repository repository = repositoryService.getRepository( repoPath );
 
-        executor.execute( new Input() {
+        Pipeline pipe = pipelineRegistry.getPipelineByName( "wildfly pipeline" );
+
+        Input wildflyInput = new Input() {
             {
                 put( "repo-name", repository.getAlias() );
                 put( "branch", repository.getDefaultBranch() );
@@ -376,8 +339,21 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
                 put( "management-port", "9990" );
 
             }
-        }, pipe, System.out::println , eventListener);
-        return null;
+        };
+        executor.execute( wildflyInput, pipe, System.out::println, pipelineEventListener );
+        
+//        Pipeline pipe = pipelineRegistry.getPipelineByName( "docker pipeline" );
+//        Input dockerInput = new Input() {
+//            {
+//                put( "repo-name", repository.getAlias() );
+//                put( "branch", "master" );
+//                put( "out-dir", "/tmp/" );
+//                put( "origin", repository.getRoot().toURI() );
+//                put( "project-dir", project.getProjectName() );
+//            }
+//        };
+//        executor.execute( dockerInput, pipe, System.out::println, pipelineEventListener );
+        return results;
     }
 
     @Override
@@ -434,18 +410,12 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
     }
 
     public void buildFinished( @Observes AfterPipelineExecutionEvent e ) {
-        System.out.println( ">>>>> IN OBSERVER" );
-        System.out.println( ">>>> FINISHED: " + e.getPipeline() );
         List<org.guvnor.ala.runtime.Runtime> allRuntimes = runtimeRegistry.getRuntimes( 0, 10, "", true );
         Runtime get = allRuntimes.get( 0 );
-        String url = "http://"+ get.getEndpoint().getHost() +":" +  get.getEndpoint().getPort() +"/"+ get.getEndpoint().getContext();
+        String url = "http://" + get.getEndpoint().getHost() + ":" + get.getEndpoint().getPort() + "/" + get.getEndpoint().getContext();
         appReadyEvent.fire( new AppReady( url ) );
     }
 
-    public void buildError( @Observes OnErrorPipelineExecutionEvent e ) {
-        System.out.println( ">>>>  IN OBSERVER" );
-        e.getError().printStackTrace();
-        System.out.println( ">>>> Failed with error: " + e.getPipeline().getName() + e.getError().getMessage() );
-    }
+    
 
 }

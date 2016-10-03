@@ -93,6 +93,10 @@
         <artifactId>guvnor-ala-wildfly-provider</artifactId>
     </dependency>
     <dependency>
+        <groupId>org.guvnor</groupId>
+        <artifactId>guvnor-ala-docker-provider</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.jboss.arquillian.junit</groupId>
       <artifactId>arquillian-junit-container</artifactId>
       <scope>test</scope>

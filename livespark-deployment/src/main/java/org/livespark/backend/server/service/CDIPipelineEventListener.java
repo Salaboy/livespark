@@ -28,6 +28,9 @@ import org.guvnor.ala.pipeline.events.OnErrorStageExecutionEvent;
 import org.guvnor.ala.pipeline.events.PipelineEvent;
 import org.guvnor.ala.pipeline.events.PipelineEventListener;
 
+/*
+ * Pipeline Event Listener that forward the pipeline emitted events to CDI events 
+*/
 @ApplicationScoped
 public class CDIPipelineEventListener implements PipelineEventListener {
 
