@@ -128,8 +128,8 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
             final BuildCallableFactory callableFactory,
             final TmpDirFactory tmpDirFactory,
             final @Named( "ioStrategy" ) IOService ioService, final Instance<ConfigExecutor> configExecutors,
-            final RepositoryService repositoryService, final Event<AppReady> appReadyEvent, 
-            final RuntimeRegistry runtimeRegistry, final PipelineRegistry pipelineRegistry, 
+            final RepositoryService repositoryService, final Event<AppReady> appReadyEvent,
+            final RuntimeRegistry runtimeRegistry, final PipelineRegistry pipelineRegistry,
             final CDIPipelineEventListener pipelineEventListener ) {
         super( pomService, m2RepoService, projectService, repositoryResolver, projectRepositoriesService, cache, handlers );
         this.callableFactory = callableFactory;
@@ -334,6 +334,7 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
                 put( "project-dir", project.getProjectName() );
                 put( "wildfly-user", "testadmin" );
                 put( "wildfly-password", "testadmin" );
+                put( "bindAddress", "localhost" );
                 put( "host", "localhost" );
                 put( "port", "8888" );
                 put( "management-port", "9990" );
@@ -341,7 +342,7 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
             }
         };
         executor.execute( wildflyInput, pipe, System.out::println, pipelineEventListener );
-        
+
 //        Pipeline pipe = pipelineRegistry.getPipelineByName( "docker pipeline" );
 //        Input dockerInput = new Input() {
 //            {
@@ -415,7 +416,5 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
         String url = "http://" + get.getEndpoint().getHost() + ":" + get.getEndpoint().getPort() + "/" + get.getEndpoint().getContext();
         appReadyEvent.fire( new AppReady( url ) );
     }
-
-    
 
 }

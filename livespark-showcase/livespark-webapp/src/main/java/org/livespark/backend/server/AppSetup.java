@@ -16,6 +16,8 @@
 
 package org.livespark.backend.server;
 
+import java.util.ArrayList;
+import java.util.List;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Event;
@@ -24,20 +26,13 @@ import javax.inject.Named;
 import org.guvnor.ala.build.maven.config.MavenBuildConfig;
 import org.guvnor.ala.build.maven.config.MavenBuildExecConfig;
 import org.guvnor.ala.build.maven.config.MavenProjectConfig;
-import org.guvnor.ala.build.maven.config.impl.MavenBuildConfigImpl;
-import org.guvnor.ala.build.maven.config.impl.MavenBuildExecConfigImpl;
-import org.guvnor.ala.build.maven.config.impl.MavenProjectConfigImpl;
+import org.guvnor.ala.build.maven.config.gwt.GWTCodeServerMavenExecConfig;
 import org.guvnor.ala.config.BinaryConfig;
 import org.guvnor.ala.config.BuildConfig;
 import org.guvnor.ala.config.ProjectConfig;
 import org.guvnor.ala.config.ProviderConfig;
-import org.guvnor.ala.config.ProvisioningConfig;
 import org.guvnor.ala.config.RuntimeConfig;
 import org.guvnor.ala.config.SourceConfig;
-import org.guvnor.ala.docker.config.impl.ContextAwareDockerProvisioningConfig;
-import org.guvnor.ala.docker.config.impl.ContextAwareDockerRuntimeExecConfig;
-import org.guvnor.ala.docker.config.impl.DockerBuildConfigImpl;
-import org.guvnor.ala.docker.config.impl.DockerProviderConfigImpl;
 import org.guvnor.ala.pipeline.Input;
 import org.guvnor.ala.pipeline.Pipeline;
 import org.guvnor.ala.pipeline.PipelineFactory;
@@ -46,7 +41,6 @@ import static org.guvnor.ala.pipeline.StageUtil.config;
 import org.guvnor.ala.registry.PipelineRegistry;
 import org.guvnor.ala.registry.RuntimeRegistry;
 import org.guvnor.ala.source.git.config.GitConfig;
-import org.guvnor.ala.source.git.config.impl.GitConfigImpl;
 import org.guvnor.ala.wildfly.config.WildflyProviderConfig;
 import org.guvnor.ala.wildfly.config.impl.ContextAwareWildflyRuntimeExecConfig;
 
@@ -152,7 +146,18 @@ public class AppSetup extends BaseAppSetup {
         // Create Wildfly Pipeline Configuration
         Stage<Input, SourceConfig> sourceConfig = config( "Git Source", (s) -> new GitConfig() {} );
         Stage<SourceConfig, ProjectConfig> projectConfig = config( "Maven Project", (s) -> new MavenProjectConfig() {} );
-        Stage<ProjectConfig, BuildConfig> buildConfig = config( "Maven Build Config", (s) -> new MavenBuildConfig() {} );
+        Stage<ProjectConfig, BuildConfig> buildConfig = config( "Maven Build Config", (s) -> new MavenBuildConfig() {
+            @Override
+            public List<String> getGoals() {
+                final List<String> result = new ArrayList<>();
+                result.add( "package" );
+                result.add( "-DfailIfNoTests=false" );
+                result.add( "-Dgwt.compiler.skip=true" );
+                return result;
+            }
+
+        } );
+        Stage<BuildConfig, BuildConfig> codeServerExec = config( "Start Code Server", (s) -> new GWTCodeServerMavenExecConfig() {} );
         Stage<BuildConfig, BinaryConfig> buildExec = config( "Maven Build", (s) -> new MavenBuildExecConfig() {} );
         Stage<BinaryConfig, ProviderConfig> providerConfig = config( "Wildfly Provider Config", (s) -> new WildflyProviderConfig() {} );
         Stage<ProviderConfig, RuntimeConfig> runtimeExec = config( "Wildfly Runtime Exec", (s) -> new ContextAwareWildflyRuntimeExecConfig() );
@@ -160,32 +165,33 @@ public class AppSetup extends BaseAppSetup {
                 .startFrom( sourceConfig )
                 .andThen( projectConfig )
                 .andThen( buildConfig )
+                .andThen( codeServerExec )
                 .andThen( buildExec )
                 .andThen( providerConfig )
                 .andThen( runtimeExec ).buildAs( "wildfly pipeline" );
         //Registering the Wildfly Pipeline to be available to the whole workbench
         pipelineRegistry.registerPipeline(wildflyPipeline);
         
-        sourceConfig = config( "Git Source", (s) -> new GitConfigImpl() );
-        projectConfig = config( "Maven Project", (s) -> new MavenProjectConfigImpl() );
-        buildConfig = config( "Maven Build Config", (s) -> new MavenBuildConfigImpl() );
-        Stage<BuildConfig, BuildConfig> dockerBuildConfig = config( "Docker Build Config", (s) -> new DockerBuildConfigImpl() );
-        buildExec = config( "Maven Build", (s) -> new MavenBuildExecConfigImpl() );
-        providerConfig = config( "Docker Provider Config", (s) -> new DockerProviderConfigImpl() );
-        Stage<ProviderConfig, ProvisioningConfig> runtimeConfig = config( "Docker Runtime Config", (s) -> new ContextAwareDockerProvisioningConfig() );
-        Stage<ProvisioningConfig, RuntimeConfig> dockerRuntimeExec = config( "Docker Runtime Exec", (s) -> new ContextAwareDockerRuntimeExecConfig() );
-
-        final Pipeline dockerPipeline = PipelineFactory
-                .startFrom( sourceConfig )
-                .andThen( projectConfig )
-                .andThen( buildConfig )
-                .andThen( dockerBuildConfig )
-                .andThen( buildExec )
-                .andThen( providerConfig )
-                .andThen( runtimeConfig )
-                .andThen( dockerRuntimeExec ).buildAs( "docker pipeline" );
-        //Registering the Docker Pipeline to be available to the whole workbench
-        pipelineRegistry.registerPipeline(dockerPipeline);
+//        sourceConfig = config( "Git Source", (s) -> new GitConfigImpl() );
+//        projectConfig = config( "Maven Project", (s) -> new MavenProjectConfigImpl() );
+//        buildConfig = config( "Maven Build Config", (s) -> new MavenBuildConfigImpl() );
+//        Stage<BuildConfig, BuildConfig> dockerBuildConfig = config( "Docker Build Config", (s) -> new DockerBuildConfigImpl() );
+//        buildExec = config( "Maven Build", (s) -> new MavenBuildExecConfigImpl() );
+//        providerConfig = config( "Docker Provider Config", (s) -> new DockerProviderConfigImpl() );
+//        Stage<ProviderConfig, ProvisioningConfig> runtimeConfig = config( "Docker Runtime Config", (s) -> new ContextAwareDockerProvisioningConfig() );
+//        Stage<ProvisioningConfig, RuntimeConfig> dockerRuntimeExec = config( "Docker Runtime Exec", (s) -> new ContextAwareDockerRuntimeExecConfig() );
+//
+//        final Pipeline dockerPipeline = PipelineFactory
+//                .startFrom( sourceConfig )
+//                .andThen( projectConfig )
+//                .andThen( buildConfig )
+//                .andThen( dockerBuildConfig )
+//                .andThen( buildExec )
+//                .andThen( providerConfig )
+//                .andThen( runtimeConfig )
+//                .andThen( dockerRuntimeExec ).buildAs( "docker pipeline" );
+//        //Registering the Docker Pipeline to be available to the whole workbench
+//        pipelineRegistry.registerPipeline(dockerPipeline);
     }
 
     private ConfigGroup getGlobalConfiguration() {
