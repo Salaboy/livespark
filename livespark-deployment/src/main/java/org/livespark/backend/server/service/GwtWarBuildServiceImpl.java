@@ -113,6 +113,8 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
 
     private CDIPipelineEventListener pipelineEventListener;
 
+    private PipelineExecutor executor;
+    
     // For proxying
     public GwtWarBuildServiceImpl() {
     }
@@ -149,6 +151,13 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
     @PostConstruct
     private void setup() {
         unpacker = new ProjectUnpacker( ioService, new DotFileFilter() );
+        Iterator<ConfigExecutor> iterator = configExecutors.iterator();
+        Collection<ConfigExecutor> configs = new ArrayList<>();
+        while ( iterator.hasNext() ) {
+            ConfigExecutor configExecutor = iterator.next();
+            configs.add( configExecutor );
+        }
+        executor = new PipelineExecutor( configs );
     }
 
     private BuildResults buildHelper( final Project project,
@@ -295,29 +304,24 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
 
     @Override
     public BuildResults buildAndDeployDevMode( Project project ) {
-        final String queueSessionId = RpcContext.getQueueSession().getSessionId();
-        final HttpSession session = RpcContext.getHttpSession();
-        final ServletRequest sreq = RpcContext.getServletRequest();
-        return buildHelper( project,
-                session,
-                new CallableProducer() {
-
-            @Override
-            public BuildCallable get( Project project, File pomXml ) {
-                return callableFactory.createDevModeDeploymentCallable( project, pomXml, session, queueSessionId, sreq );
-            }
-        } );
+//        final String queueSessionId = RpcContext.getQueueSession().getSessionId();
+//        final HttpSession session = RpcContext.getHttpSession();
+//        final ServletRequest sreq = RpcContext.getServletRequest();
+//        return buildHelper( project,
+//                session,
+//                new CallableProducer() {
+//
+//            @Override
+//            public BuildCallable get( Project project, File pomXml ) {
+//                return callableFactory.createDevModeDeploymentCallable( project, pomXml, session, queueSessionId, sreq );
+//            }
+//        } );
+        return buildAndDeploySDMWithPipeline(project);
     }
 
     public BuildResults buildAndDeployWithPipeline( Project project ) {
         final BuildResults results = new BuildResults( project.getPom().getGav() );
-        Iterator<ConfigExecutor> iterator = configExecutors.iterator();
-        Collection<ConfigExecutor> configs = new ArrayList<>();
-        while ( iterator.hasNext() ) {
-            ConfigExecutor configExecutor = iterator.next();
-            configs.add( configExecutor );
-        }
-        final PipelineExecutor executor = new PipelineExecutor( configs );
+        
 
         Path rootPath = project.getRootPath();
         Path repoPath = PathFactory.newPath( "repo", rootPath.toURI().substring( 0, rootPath.toURI().indexOf( rootPath.getFileName() ) ) );
@@ -343,17 +347,35 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
         };
         executor.execute( wildflyInput, pipe, System.out::println, pipelineEventListener );
 
-//        Pipeline pipe = pipelineRegistry.getPipelineByName( "docker pipeline" );
-//        Input dockerInput = new Input() {
-//            {
-//                put( "repo-name", repository.getAlias() );
-//                put( "branch", "master" );
-//                put( "out-dir", "/tmp/" );
-//                put( "origin", repository.getRoot().toURI() );
-//                put( "project-dir", project.getProjectName() );
-//            }
-//        };
-//        executor.execute( dockerInput, pipe, System.out::println, pipelineEventListener );
+        return results;
+    }
+    
+    public BuildResults buildAndDeploySDMWithPipeline( Project project ) {
+        final BuildResults results = new BuildResults( project.getPom().getGav() );
+        Path rootPath = project.getRootPath();
+        Path repoPath = PathFactory.newPath( "repo", rootPath.toURI().substring( 0, rootPath.toURI().indexOf( rootPath.getFileName() ) ) );
+        Repository repository = repositoryService.getRepository( repoPath );
+
+        Pipeline pipe = pipelineRegistry.getPipelineByName( "wildfly sdm pipeline" );
+
+        Input wildflyInput = new Input() {
+            {
+                put( "repo-name", repository.getAlias() );
+                put( "branch", repository.getDefaultBranch() );
+                put( "out-dir", "/tmp/" );
+                put( "origin", repository.getRoot().toURI() );
+                put( "project-dir", project.getProjectName() );
+                put( "wildfly-user", "testadmin" );
+                put( "wildfly-password", "testadmin" );
+                put( "bindAddress", "localhost" );
+                put( "host", "localhost" );
+                put( "port", "8888" );
+                put( "management-port", "9990" );
+
+            }
+        };
+        executor.execute( wildflyInput, pipe, System.out::println, pipelineEventListener );
+
         return results;
     }
 

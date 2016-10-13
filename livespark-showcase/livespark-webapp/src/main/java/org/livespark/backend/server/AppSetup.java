@@ -146,7 +146,17 @@ public class AppSetup extends BaseAppSetup {
         // Create Wildfly Pipeline Configuration
         Stage<Input, SourceConfig> sourceConfig = config( "Git Source", (s) -> new GitConfig() {} );
         Stage<SourceConfig, ProjectConfig> projectConfig = config( "Maven Project", (s) -> new MavenProjectConfig() {} );
-        Stage<ProjectConfig, BuildConfig> buildConfig = config( "Maven Build Config", (s) -> new MavenBuildConfig() {
+         Stage<ProjectConfig, BuildConfig> buildConfig = config( "Maven Build Config", (s) -> new MavenBuildConfig() {
+            @Override
+            public List<String> getGoals() {
+                final List<String> result = new ArrayList<>();
+                result.add( "package" );
+                result.add( "-DfailIfNoTests=false" );
+                return result;
+            }
+
+        } );
+        Stage<ProjectConfig, BuildConfig> buildSDMConfig = config( "Maven Build Config", (s) -> new MavenBuildConfig() {
             @Override
             public List<String> getGoals() {
                 final List<String> result = new ArrayList<>();
@@ -161,16 +171,28 @@ public class AppSetup extends BaseAppSetup {
         Stage<BuildConfig, BinaryConfig> buildExec = config( "Maven Build", (s) -> new MavenBuildExecConfig() {} );
         Stage<BinaryConfig, ProviderConfig> providerConfig = config( "Wildfly Provider Config", (s) -> new WildflyProviderConfig() {} );
         Stage<ProviderConfig, RuntimeConfig> runtimeExec = config( "Wildfly Runtime Exec", (s) -> new ContextAwareWildflyRuntimeExecConfig() );
+        
         Pipeline wildflyPipeline = PipelineFactory
                 .startFrom( sourceConfig )
                 .andThen( projectConfig )
                 .andThen( buildConfig )
-                .andThen( codeServerExec )
                 .andThen( buildExec )
                 .andThen( providerConfig )
                 .andThen( runtimeExec ).buildAs( "wildfly pipeline" );
         //Registering the Wildfly Pipeline to be available to the whole workbench
         pipelineRegistry.registerPipeline(wildflyPipeline);
+        
+        Pipeline wildflySDMPipeline = PipelineFactory
+                .startFrom( sourceConfig )
+                .andThen( projectConfig )
+                .andThen( buildSDMConfig )
+                .andThen( codeServerExec )
+                .andThen( buildExec )
+                .andThen( providerConfig )
+                .andThen( runtimeExec ).buildAs( "wildfly sdm pipeline" );
+        //Registering the Wildfly Pipeline to be available to the whole workbench
+        pipelineRegistry.registerPipeline(wildflySDMPipeline);
+        
         
 //        sourceConfig = config( "Git Source", (s) -> new GitConfigImpl() );
 //        projectConfig = config( "Maven Project", (s) -> new MavenProjectConfigImpl() );

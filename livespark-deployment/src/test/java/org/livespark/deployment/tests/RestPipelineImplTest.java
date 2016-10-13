@@ -23,6 +23,7 @@ import org.guvnor.ala.build.maven.executor.MavenBuildConfigExecutor;
 import org.guvnor.ala.build.maven.executor.MavenBuildExecConfigExecutor;
 import org.guvnor.ala.build.maven.executor.MavenProjectConfigExecutor;
 import org.guvnor.ala.build.maven.executor.gwt.GWTCodeServerMavenExecConfigExecutor;
+import org.guvnor.ala.build.maven.executor.gwt.GWTCodeServerPortLeaser;
 import org.guvnor.ala.config.BinaryConfig;
 import org.guvnor.ala.config.BuildConfig;
 import org.guvnor.ala.config.ProjectConfig;
@@ -208,6 +209,7 @@ public class RestPipelineImplTest {
         final BuildRegistry buildRegistry = new InMemoryBuildRegistry();
         final InMemoryRuntimeRegistry runtimeRegistry = new InMemoryRuntimeRegistry();
         final WildflyAccessInterface wildflyAccessInterface = new WildflyAccessInterfaceImpl();
+        final GWTCodeServerPortLeaser leaser = new GWTCodeServerPortLeaser();
 
         final Stage<Input, SourceConfig> sourceConfig = config( "Git Source", (s) -> new GitConfig() {
         } );
@@ -249,7 +251,7 @@ public class RestPipelineImplTest {
                 new MavenProjectConfigExecutor( sourceRegistry ),
                 new MavenBuildConfigExecutor(),
                 new MavenBuildExecConfigExecutor( buildRegistry ),
-                new GWTCodeServerMavenExecConfigExecutor(),
+                new GWTCodeServerMavenExecConfigExecutor( leaser ),
                 new WildflyProviderConfigExecutor( runtimeRegistry ),
                 wildflyRuntimeExecExecutor ) );
 
@@ -281,7 +283,7 @@ public class RestPipelineImplTest {
         final Source source = repository.getSource( "master" );
         assertNotNull( source );
         final InputStream pomStream = org.uberfire.java.nio.file.Files.newInputStream( source.getPath().resolve( "users-new" ).resolve( "pom.xml" ) );
-        String stringFromInputStream = getStringFromInputStream(pomStream);
+        String stringFromInputStream = getStringFromInputStream( pomStream );
         System.out.println( "stringFromInputStream = " + stringFromInputStream );
 //        final MavenProject project = MavenProjectLoader.parseMavenPom( pomStream );
 //        assertNotNull( project );
@@ -308,7 +310,7 @@ public class RestPipelineImplTest {
 
     }
 
-     // convert InputStream to String
+    // convert InputStream to String
     private static String getStringFromInputStream( InputStream is ) {
 
         BufferedReader br = null;
@@ -337,7 +339,7 @@ public class RestPipelineImplTest {
         return sb.toString();
 
     }
-    
+
     @Test
     @InSequence( 3 )
     public void shouldBeAbleToStopAndDestroyTest() {
