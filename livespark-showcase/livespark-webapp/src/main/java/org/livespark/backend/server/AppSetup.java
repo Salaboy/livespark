@@ -18,6 +18,7 @@ package org.livespark.backend.server;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Event;
@@ -150,10 +151,11 @@ public class AppSetup extends BaseAppSetup {
             @Override
             public List<String> getGoals() {
                 final List<String> result = new ArrayList<>();
+                result.add( "clean" );
                 result.add( "package" );
-                result.add( "-DfailIfNoTests=false" );
                 return result;
             }
+           
 
         } );
         Stage<ProjectConfig, BuildConfig> buildSDMConfig = config( "Maven Build Config", (s) -> new MavenBuildConfig() {
@@ -161,8 +163,13 @@ public class AppSetup extends BaseAppSetup {
             public List<String> getGoals() {
                 final List<String> result = new ArrayList<>();
                 result.add( "package" );
-                result.add( "-DfailIfNoTests=false" );
-                result.add( "-Dgwt.compiler.skip=true" );
+                return result;
+            }
+            @Override
+            public Properties getProperties() {
+                final Properties result = new Properties();
+                result.put("failIfNoTests", false);
+                result.put("gwt.compiler.skip", true);
                 return result;
             }
 

@@ -62,6 +62,7 @@ import org.guvnor.structure.repositories.Repository;
 import org.guvnor.structure.repositories.RepositoryService;
 import org.jboss.errai.bus.server.annotations.Service;
 import org.jboss.errai.bus.server.api.RpcContext;
+import org.jgroups.util.UUID;
 import org.kie.workbench.common.services.backend.builder.BuildServiceImpl;
 import org.kie.workbench.common.services.backend.builder.LRUBuilderCache;
 import org.kie.workbench.common.services.shared.project.KieProjectService;
@@ -321,8 +322,6 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
 
     public BuildResults buildAndDeployWithPipeline( Project project ) {
         final BuildResults results = new BuildResults( project.getPom().getGav() );
-        
-
         Path rootPath = project.getRootPath();
         Path repoPath = PathFactory.newPath( "repo", rootPath.toURI().substring( 0, rootPath.toURI().indexOf( rootPath.getFileName() ) ) );
         Repository repository = repositoryService.getRepository( repoPath );
@@ -333,8 +332,6 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
             {
                 put( "repo-name", repository.getAlias() );
                 put( "branch", repository.getDefaultBranch() );
-                put( "out-dir", "/tmp/" );
-                put( "origin", repository.getRoot().toURI() );
                 put( "project-dir", project.getProjectName() );
                 put( "wildfly-user", "testadmin" );
                 put( "wildfly-password", "testadmin" );
@@ -362,8 +359,6 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
             {
                 put( "repo-name", repository.getAlias() );
                 put( "branch", repository.getDefaultBranch() );
-                put( "out-dir", "/tmp/" );
-                put( "origin", repository.getRoot().toURI() );
                 put( "project-dir", project.getProjectName() );
                 put( "wildfly-user", "testadmin" );
                 put( "wildfly-password", "testadmin" );
