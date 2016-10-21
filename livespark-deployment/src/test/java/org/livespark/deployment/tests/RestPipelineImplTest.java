@@ -227,8 +227,8 @@ public class RestPipelineImplTest {
             @Override
             public Properties getProperties() {
                 final Properties result = new Properties();
-                result.put("failIfNoTests", false);
-                result.put("gwt.compiler.skip", true);
+                result.setProperty("failIfNoTests", "false");
+                result.setProperty("gwt.compiler.skip", "true");
                 return result;
             }
 
