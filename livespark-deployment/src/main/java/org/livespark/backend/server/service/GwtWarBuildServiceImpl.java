@@ -44,6 +44,7 @@ import org.guvnor.ala.pipeline.events.AfterPipelineExecutionEvent;
 import org.guvnor.ala.pipeline.execution.PipelineExecutor;
 import org.guvnor.ala.registry.PipelineRegistry;
 import org.guvnor.ala.registry.RuntimeRegistry;
+import org.guvnor.ala.registry.SourceRegistry;
 import org.guvnor.ala.runtime.Runtime;
 
 import org.guvnor.common.services.backend.file.DotFileFilter;
@@ -109,6 +110,8 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
     private Instance<ConfigExecutor> configExecutors;
 
     private RuntimeRegistry runtimeRegistry;
+    
+    private SourceRegistry sourceRegistry;
 
     private PipelineRegistry pipelineRegistry;
 
@@ -132,6 +135,7 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
             final TmpDirFactory tmpDirFactory,
             final @Named( "ioStrategy" ) IOService ioService, final Instance<ConfigExecutor> configExecutors,
             final RepositoryService repositoryService, final Event<AppReady> appReadyEvent,
+            final SourceRegistry sourceRegistry,
             final RuntimeRegistry runtimeRegistry, final PipelineRegistry pipelineRegistry,
             final CDIPipelineEventListener pipelineEventListener ) {
         super( pomService, m2RepoService, projectService, repositoryResolver, projectRepositoriesService, cache, handlers );
@@ -143,6 +147,7 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
         this.appReadyEvent = appReadyEvent;
         this.runtimeRegistry = runtimeRegistry;
         this.pipelineRegistry = pipelineRegistry;
+        this.sourceRegistry = sourceRegistry;
         this.pipelineEventListener = pipelineEventListener;
     }
 
@@ -325,7 +330,7 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
         Path rootPath = project.getRootPath();
         Path repoPath = PathFactory.newPath( "repo", rootPath.toURI().substring( 0, rootPath.toURI().indexOf( rootPath.getFileName() ) ) );
         Repository repository = repositoryService.getRepository( repoPath );
-
+        
         Pipeline pipe = pipelineRegistry.getPipelineByName( "wildfly pipeline" );
 
         Input wildflyInput = new Input() {
@@ -352,11 +357,13 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
         Path rootPath = project.getRootPath();
         Path repoPath = PathFactory.newPath( "repo", rootPath.toURI().substring( 0, rootPath.toURI().indexOf( rootPath.getFileName() ) ) );
         Repository repository = repositoryService.getRepository( repoPath );
-
+        
+  
         Pipeline pipe = pipelineRegistry.getPipelineByName( "wildfly sdm pipeline" );
-
+        
         Input wildflyInput = new Input() {
             {
+                
                 put( "repo-name", repository.getAlias() );
                 put( "branch", repository.getDefaultBranch() );
                 put( "project-dir", project.getProjectName() );
@@ -369,6 +376,15 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
 
             }
         };
+        List<org.guvnor.ala.source.Repository> allRepositories = sourceRegistry.getAllRepositories();
+        if(allRepositories.size() > 0){
+            org.guvnor.ala.source.Repository repo = allRepositories.get( 0 );
+            if(repo != null){
+                final String tempDir = sourceRegistry.getAllProjects( repo ).get( 0 ).getTempDir();
+                wildflyInput.put( "project-temp-dir", tempDir );
+            }
+        }
+        
         executor.execute( wildflyInput, pipe, System.out::println, pipelineEventListener );
 
         return results;

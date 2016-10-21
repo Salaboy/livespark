@@ -91,7 +91,7 @@ public class RestPipelineImplTest {
 
     @After
     public void tearDown() {
-        FileUtils.deleteQuietly( tempPath );
+        FileUtils.deleteQuietly(tempPath);
     }
 
     @Test
@@ -235,7 +235,7 @@ public class RestPipelineImplTest {
         });
 
         final Stage<BuildConfig, BuildConfig> codeServerExec = config("Start Code Server", (s) -> new GWTCodeServerMavenExecConfig() {
-            
+
         });
 
         final Stage<BuildConfig, BinaryConfig> buildExec = config("Maven Build", (s) -> new MavenBuildExecConfig() {
@@ -290,9 +290,9 @@ public class RestPipelineImplTest {
         final GitRepository repository = (GitRepository) local.getRepository("ls-users-new", Collections.emptyMap());
         final Source source = repository.getSource("master");
         assertNotNull(source);
-        
-        
-        executor.execute(new Input() {
+
+        allRepositories = sourceRegistry.getAllRepositories();
+        Input wildflyInput = new Input() {
             {
                 put("repo-name", "ls-users-new");
                 put("branch", "master");
@@ -304,7 +304,16 @@ public class RestPipelineImplTest {
                 put("management-port", "9990");
 
             }
-        }, pipeCodeServer, System.out::println);
+        };
+        if (allRepositories.size() > 0) {
+            org.guvnor.ala.source.Repository repo = allRepositories.get(0);
+            if (repo != null) {
+                final String tempDir = sourceRegistry.getAllProjects(repo).get(0).getTempDir();
+                wildflyInput.put("project-temp-dir", tempDir);
+            }
+        }
+
+        executor.execute(wildflyInput, pipeCodeServer, System.out::println);
 
         allRuntimes = runtimeRegistry.getRuntimes(0, 10, "", true);
 
