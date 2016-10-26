@@ -376,14 +376,12 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
 
             }
         };
-        List<org.guvnor.ala.source.Repository> allRepositories = sourceRegistry.getAllRepositories();
-        if(allRepositories.size() > 0){
-            org.guvnor.ala.source.Repository repo = allRepositories.get( 0 );
-            if(repo != null){
-                final String tempDir = sourceRegistry.getAllProjects( repo ).get( 0 ).getTempDir();
-                wildflyInput.put( "project-temp-dir", tempDir );
-            }
+        org.guvnor.ala.build.Project projectByName = sourceRegistry.getProjectByName(project.getProjectName());
+
+        if (projectByName != null) {
+            wildflyInput.put("project-temp-dir", projectByName.getTempDir());
         }
+       
         
         executor.execute( wildflyInput, pipe, System.out::println, pipelineEventListener );
 

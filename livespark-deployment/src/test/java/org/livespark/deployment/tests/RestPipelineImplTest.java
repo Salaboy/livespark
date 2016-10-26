@@ -15,6 +15,7 @@ import org.apache.commons.io.FileUtils;
 import org.arquillian.cube.CubeController;
 import org.arquillian.cube.HostIp;
 import org.arquillian.cube.requirement.ArquillianConditionalRunner;
+import org.guvnor.ala.build.Project;
 import org.guvnor.ala.build.maven.config.gwt.GWTCodeServerMavenExecConfig;
 
 import org.guvnor.ala.build.maven.config.MavenBuildConfig;
@@ -102,7 +103,6 @@ public class RestPipelineImplTest {
     }
 
     @Test
-    @Ignore
     @InSequence(2)
     public void testPipelineForDeployingToWildfly() {
 
@@ -194,7 +194,7 @@ public class RestPipelineImplTest {
 
         wildflyRuntime = (WildflyRuntime) runtime;
 
-        assertEquals("Stopped", wildflyRuntime.getState().getState());
+        assertEquals("NA", wildflyRuntime.getState().getState());
 
         wildflyRuntimeExecExecutor.destroy(wildflyRuntime);
 
@@ -203,7 +203,7 @@ public class RestPipelineImplTest {
     }
 
     @Test
-    @InSequence(2)
+    @InSequence(3)
     public void testPipelineForDeployingToWildflyWithCodeServer() {
 
         final SourceRegistry sourceRegistry = new InMemorySourceRegistry();
@@ -305,13 +305,12 @@ public class RestPipelineImplTest {
 
             }
         };
-        if (allRepositories.size() > 0) {
-            org.guvnor.ala.source.Repository repo = allRepositories.get(0);
-            if (repo != null) {
-                final String tempDir = sourceRegistry.getAllProjects(repo).get(0).getTempDir();
-                wildflyInput.put("project-temp-dir", tempDir);
-            }
-        }
+
+        Project projectByName = sourceRegistry.getProjectByName("users-new");
+        assertNotNull(projectByName);
+        String tempDir = projectByName.getTempDir();
+
+        wildflyInput.put("project-temp-dir", tempDir);
 
         executor.execute(wildflyInput, pipeCodeServer, System.out::println);
 
@@ -323,38 +322,8 @@ public class RestPipelineImplTest {
 
     }
 
-    // convert InputStream to String
-    private static String getStringFromInputStream(InputStream is) {
-
-        BufferedReader br = null;
-        StringBuilder sb = new StringBuilder();
-
-        String line;
-        try {
-
-            br = new BufferedReader(new InputStreamReader(is));
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        return sb.toString();
-
-    }
-
     @Test
-    @InSequence(3)
+    @InSequence(4)
     public void shouldBeAbleToStopAndDestroyTest() {
         cc.stop(CONTAINER);
         cc.destroy(CONTAINER);
