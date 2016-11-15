@@ -141,16 +141,18 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
     }
 
     @Override
-    public BuildResults buildAndDeploy( final Project project, final boolean suppressHandlers, final DeploymentMode mode ) {
-        return buildAndDeployWithPipeline( project );
+    public BuildResults buildAndDeploy( Project project, boolean suppressHandlers, DeploymentMode mode ) {
+        final ServletRequest sreq = RpcContext.getServletRequest();
+        return buildAndDeployWithPipeline( project, sreq );
     }
 
     @Override
-    public BuildResults buildAndDeployDevMode( final Project project ) {
-        return buildAndDeploySDMWithPipeline(project);
+    public BuildResults buildAndDeployDevMode( Project project ) {
+        final ServletRequest sreq = RpcContext.getServletRequest();
+        return buildAndDeploySDMWithPipeline(project, sreq);
     }
 
-    public BuildResults buildAndDeployWithPipeline( final Project project ) {
+    public BuildResults buildAndDeployWithPipeline( Project project, ServletRequest sreq  ) {
         final BuildResults results = new BuildResults( project.getPom().getGav() );
         final Path rootPath = project.getRootPath();
         final Path repoPath = PathFactory.newPath( "repo", rootPath.toURI().substring( 0, rootPath.toURI().indexOf( rootPath.getFileName() ) ) );
@@ -165,9 +167,9 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
                 put( "project-dir", project.getProjectName() );
                 put( "wildfly-user", "testadmin" );
                 put( "wildfly-password", "testadmin" );
-                put( "bindAddress", "localhost" );
-                put( "host", "localhost" );
-                put( "port", "8888" );
+                put( "bindAddress", sreq.getLocalAddr() );
+                put( "host",  sreq.getLocalAddr());
+                put( "port", String.valueOf( sreq.getLocalPort() ) );
                 put( "management-port", "9990" );
 
             }
@@ -176,8 +178,8 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
 
         return results;
     }
-
-    public BuildResults buildAndDeploySDMWithPipeline( final Project project ) {
+    
+    public BuildResults buildAndDeploySDMWithPipeline( Project project , ServletRequest sreq) {
         final BuildResults results = new BuildResults( project.getPom().getGav() );
         final Path rootPath = project.getRootPath();
         final Path repoPath = PathFactory.newPath( "repo", rootPath.toURI().substring( 0, rootPath.toURI().indexOf( rootPath.getFileName() ) ) );
@@ -194,9 +196,9 @@ public class GwtWarBuildServiceImpl extends BuildServiceImpl implements GwtWarBu
                 put( "project-dir", project.getProjectName() );
                 put( "wildfly-user", "testadmin" );
                 put( "wildfly-password", "testadmin" );
-                put( "bindAddress", "localhost" );
-                put( "host", "localhost" );
-                put( "port", "8888" );
+                put( "bindAddress", sreq.getLocalAddr() );
+                put( "host",  sreq.getLocalAddr());
+                put( "port", String.valueOf( sreq.getLocalPort() ) );
                 put( "management-port", "9990" );
 
             }

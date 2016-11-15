@@ -40,6 +40,7 @@
     <errai.jboss.home>${project.build.directory}/wildfly-${as.version}</errai.jboss.home>
     <gwt.compiler.localWorkers>1</gwt.compiler.localWorkers>
     <gwt.memory.settings>-Xmx4g -Xms1g -Xss1M</gwt.memory.settings>
+    <docker.memory>4000000</docker.memory>
   </properties>
 
   <dependencies>
@@ -1269,6 +1270,7 @@
                config. Product X community specific artifacts (e.g. home page) are specified using
                profiles "producized" and "notProductized".
 
+<<<<<<< ded789fe0a1a4ce854ee30a7ddb01ddf71dd4b4d:app-former-showcase/app-former-webapp/pom.xml
                Keep the configuration here (pluginManagement) instead of directly in <plugins>. -->
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>gwt-maven-plugin</artifactId>
@@ -1534,81 +1536,137 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>io.fabric8</groupId>
+        <artifactId>docker-maven-plugin</artifactId>
+        <version>0.15.0</version>
+        <configuration>
+          <images>
+            <image>
+              <alias>user</alias>
+              <name>xxx/livespark-webapp</name>
+              <build>
+                <from>jboss/wildfly:10.0.0.Final</from>
+                <assembly>
+                  <descriptor>assembly.xml</descriptor>
+                  <basedir>/opt/jboss/wildfly/standalone/deployments/</basedir>
+                  <user>jboss:jboss:jboss</user>
+                </assembly>
+                <volumes>
+                  <volume>/tmp</volume>
+                </volumes>
+                <entryPoint>/opt/jboss/wildfly/bin/add-user.sh -a admin admin -g admin,user; /opt/jboss/wildfly/bin/add-user.sh testadmin testadmin; /opt/jboss/wildfly/bin/standalone.sh -b 0.0.0.0 -Dorg.kie.demo=true -Dorg.kie.clean.onstartup=true -Djava.util.prefs.syncInterval=2000000 -Dorg.uberfire.async.executor.safemode=true -Dorg.uberfire.nio.git.dir=/tmp/niogit</entryPoint>
+                <ports>
+                  <port>8080</port>
+                  <port>9990</port>
+                </ports>
+
+              </build>
+
+              <run>
+                <ports>
+                  <port>8080:8080</port>
+                  <port>9990:9990</port>
+                </ports>
+                <log>
+                  <prefix>WF</prefix>
+                  <date>none</date>
+                  <color>cyan</color>
+                </log>
+              </run>
+
+            </image>
+          </images>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.wildfly.swarm</groupId>
+        <artifactId>wildfly-swarm-plugin</artifactId>
+        <version>${version.wildfly.swarm}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>package</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
+
   <profiles>
-    <profile>
-      <id>notProductizedProfile</id>
-      <activation>
-        <property>
-          <name>!productized</name>
-        </property>
-      </activation>
+        <profile>
+            <id>notProductizedProfile</id>
+            <activation>
+                <property>
+                    <name>!productized</name>
+                </property>
+            </activation>
 
-      <dependencies>
-        <dependency>
-          <groupId>org.kie.appformer</groupId>
-          <artifactId>app-former-home-page</artifactId>
-          <version>0.0.1-SNAPSHOT</version>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.kie.workbench.screens</groupId>
-          <artifactId>kie-wb-common-home-client</artifactId>
-          <scope>provided</scope>
-        </dependency>
-      </dependencies>
+            <dependencies>
+                <dependency>
+                    <groupId>org.livespark</groupId>
+                    <artifactId>livespark-home-page</artifactId>
+                    <version>0.0.1-SNAPSHOT</version>
+                    <scope>provided</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.kie.workbench.screens</groupId>
+                    <artifactId>kie-wb-common-home-client</artifactId>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
 
-      <build>
-        <pluginManagement>
-          <plugins>
-            <plugin>
-              <groupId>org.codehaus.mojo</groupId>
-              <artifactId>gwt-maven-plugin</artifactId>
-              <configuration>
-                <compileSourcesArtifacts combine.children="append">
-                  <!-- Community Home Page -->
-                  <compileSourcesArtifact>org.kie.appformer:app-former-home-page</compileSourcesArtifact>
-                  <compileSourcesArtifact>org.kie.workbench.screens:kie-wb-common-home-api</compileSourcesArtifact>
-                  <compileSourcesArtifact>org.kie.workbench.screens:kie-wb-common-home-client</compileSourcesArtifact>
-                </compileSourcesArtifacts>
-              </configuration>
-            </plugin>
-          </plugins>
-        </pluginManagement>
-      </build>
-    </profile>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.codehaus.mojo</groupId>
+                            <artifactId>gwt-maven-plugin</artifactId>
+                            <configuration>
+                                <compileSourcesArtifacts combine.children="append">
+                                    <!-- Community Home Page -->
+                                    <compileSourcesArtifact>org.livespark:livespark-home-page</compileSourcesArtifact>
+                                    <compileSourcesArtifact>org.kie.workbench.screens:kie-wb-common-home-api</compileSourcesArtifact>
+                                    <compileSourcesArtifact>org.kie.workbench.screens:kie-wb-common-home-client</compileSourcesArtifact>
+                                </compileSourcesArtifacts>
+                            </configuration>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
 
-    <!-- Product Home Page -->
+        <!-- Product Home Page -->
 
-    <!-- Full profile builds all GWT permutations -->
-    <profile>
-      <id>fullProfile</id>
-      <activation>
-        <property>
-          <name>full</name>
-        </property>
-      </activation>
-      <properties>
-        <gwt.memory.settings>-Xmx3g -Xms1g -Xss1M</gwt.memory.settings>
-        <gwt.compiler.localWorkers>4</gwt.compiler.localWorkers>
-      </properties>
-      <build>
-        <pluginManagement>
-          <plugins>
-            <plugin>
-              <groupId>org.codehaus.mojo</groupId>
-              <artifactId>gwt-maven-plugin</artifactId>
-              <configuration>
-                <module>org.kie.appformer.AppFormer</module>
-                <draftCompile>false</draftCompile>
-              </configuration>
-            </plugin>
-          </plugins>
-        </pluginManagement>
-      </build>
-    </profile>
+        <!-- Full profile builds all GWT permutations -->
+        <profile>
+            <id>fullProfile</id>
+            <activation>
+                <property>
+                    <name>full</name>
+                </property>
+            </activation>
+            <properties>
+                <gwt.memory.settings>-Xmx3g -Xms1g -Xss1M</gwt.memory.settings>
+                <gwt.compiler.localWorkers>4</gwt.compiler.localWorkers>
+            </properties>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.codehaus.mojo</groupId>
+                            <artifactId>gwt-maven-plugin</artifactId>
+                            <configuration>
+                                <module>org.livespark.LiveSpark</module>
+                                <draftCompile>false</draftCompile>
+                            </configuration>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
 
-  </profiles>
+    </profiles>
 </project>
