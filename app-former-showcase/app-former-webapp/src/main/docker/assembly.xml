@@ -5,10 +5,10 @@
     <dependencySets>
         <dependencySet>
             <includes>
-                <include>org.livespark:livespark-webapp</include>
+                <include>org.kie.appformer:app-former-webapp</include>
             </includes>
             <outputDirectory>.</outputDirectory>
-            <outputFileNameMapping>livespark-webapp.war</outputFileNameMapping>
+            <outputFileNameMapping>app-former-webapp.war</outputFileNameMapping>
         </dependencySet>
     </dependencySets>
 </assembly>

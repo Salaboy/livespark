@@ -32,6 +32,7 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Specializes;
 import javax.inject.Inject;
+import javax.servlet.ServletRequest;
 
 import org.guvnor.ala.pipeline.ConfigExecutor;
 import org.guvnor.ala.pipeline.Input;
@@ -54,6 +55,7 @@ import org.guvnor.m2repo.backend.server.ExtendedM2RepoService;
 import org.guvnor.structure.repositories.Repository;
 import org.guvnor.structure.repositories.RepositoryService;
 import org.jboss.errai.bus.server.annotations.Service;
+import org.jboss.errai.bus.server.api.RpcContext;
 import org.kie.appformer.client.shared.AppReady;
 import org.kie.appformer.client.shared.GwtWarBuildService;
 import org.kie.workbench.common.services.backend.builder.BuildServiceImpl;
