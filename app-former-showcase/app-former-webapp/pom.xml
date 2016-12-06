@@ -1456,7 +1456,7 @@
           <images>
             <image>
               <alias>user</alias>
-              <name>xxx/app-former-webapp</name>
+              <name>salaboy/app-former-webapp</name>
               <build>
                 <from>jboss/wildfly:10.0.0.Final</from>
                 <assembly>
